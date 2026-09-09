@@ -11,6 +11,7 @@ export function RunPage() {
   const { runId } = useParams<{ runId: string }>()
   const [snapshot, setSnapshot] = useState<RunSnapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   const refresh = useCallback(async () => {
     if (!runId) return
@@ -33,58 +34,86 @@ export function RunPage() {
     return () => clearInterval(timer)
   }, [snapshot, refresh])
 
+  /**
+   * A resume can take minutes (prompt writing + image generation), so guard
+   * against double-submission and surface failures instead of leaving an
+   * unhandled rejection and a frozen review screen.
+   */
+  async function submitResume(payload: Parameters<typeof resumeRun>[1]) {
+    if (!runId || submitting) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      setSnapshot(await resumeRun(runId, payload))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit review')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   async function handleReferencesSubmit(
     decisions: { id: string; status: 'approved' | 'rejected'; rejectReason?: string }[],
   ) {
-    if (!runId) return
-    setSnapshot(await resumeRun(runId, { decisions }))
+    await submitResume({ decisions })
   }
 
   async function handleFinalSubmit(payload: { status: 'approved' | 'rejected'; rejectReason?: string }) {
-    if (!runId) return
-    setSnapshot(await resumeRun(runId, payload))
+    await submitResume(payload)
   }
 
-  if (error) return <p role="alert">{error}</p>
-  if (!snapshot) return <p>Loading…</p>
+  function renderBody() {
+    if (!snapshot) return error ? null : <p>Loading…</p>
 
-  const { state, pendingInterrupt } = snapshot
+    const { state, pendingInterrupt } = snapshot
 
-  switch (state.runStatus) {
-    case 'working':
-      return <p>Working…</p>
-    case 'paused-references':
-    case 'capped-references':
-      return pendingInterrupt?.type === 'references' ? (
-        <ReferenceGrid
-          images={pendingInterrupt.images}
-          capped={pendingInterrupt.capped}
-          round={state.referenceRound}
-          onSubmit={handleReferencesSubmit}
-        />
-      ) : null
-    case 'paused-final':
-    case 'capped-final':
-      return pendingInterrupt?.type === 'final' ? (
-        <FinalReview
-          imageUrl={pendingInterrupt.imageUrl}
-          capped={pendingInterrupt.capped}
-          round={state.finalRound}
-          onSubmit={handleFinalSubmit}
-        />
-      ) : null
-    case 'done':
-      return (
-        <section>
-          <h1>Done</h1>
-          {state.generatedImagePath && <img src={state.generatedImagePath} alt="Final food photo" />}
-        </section>
-      )
-    case 'failed':
-      return <p role="alert">Run failed: {state.error}</p>
-    case 'abandoned':
-      return <p role="alert">This run was abandoned.</p>
-    default:
-      return null
+    switch (state.runStatus) {
+      case 'working':
+        return <p>Working…</p>
+      case 'paused-references':
+      case 'capped-references':
+        return pendingInterrupt?.type === 'references' ? (
+          <ReferenceGrid
+            images={pendingInterrupt.images}
+            capped={pendingInterrupt.capped}
+            round={state.referenceRound}
+            submitting={submitting}
+            onSubmit={handleReferencesSubmit}
+          />
+        ) : null
+      case 'paused-final':
+      case 'capped-final':
+        return pendingInterrupt?.type === 'final' ? (
+          <FinalReview
+            imageUrl={pendingInterrupt.imageUrl}
+            capped={pendingInterrupt.capped}
+            round={state.finalRound}
+            submitting={submitting}
+            onSubmit={handleFinalSubmit}
+          />
+        ) : null
+      case 'done':
+        return (
+          <section>
+            <h1>Done</h1>
+            {state.generatedImagePath && <img src={state.generatedImagePath} alt="Final food photo" />}
+          </section>
+        )
+      case 'failed':
+        return <p role="alert">Run failed: {state.error}</p>
+      case 'abandoned':
+        return <p role="alert">This run was abandoned.</p>
+      default:
+        return null
+    }
   }
+
+  // The error is a banner rather than a full-page replacement: a failed submit
+  // must not throw away the review UI the human still needs to act on.
+  return (
+    <>
+      {error && <p role="alert">{error}</p>}
+      {renderBody()}
+    </>
+  )
 }

@@ -7,9 +7,10 @@ export function ReferenceGrid(props: {
   images: ReferenceImage[]
   capped: boolean
   round: number
+  submitting?: boolean
   onSubmit: (decisions: { id: string; status: 'approved' | 'rejected'; rejectReason?: string }[]) => void
 }) {
-  const { images, capped, round, onSubmit } = props
+  const { images, capped, round, submitting = false, onSubmit } = props
   const [decisions, setDecisions] = useState<Record<string, Decision>>({})
 
   function setStatus(id: string, status: 'approved' | 'rejected') {
@@ -21,6 +22,7 @@ export function ReferenceGrid(props: {
   }
 
   function handleSubmit() {
+    if (submitting) return
     onSubmit(
       images.map((image) => ({
         id: image.id,
@@ -60,8 +62,8 @@ export function ReferenceGrid(props: {
           </li>
         ))}
       </ul>
-      <button type="button" onClick={handleSubmit}>
-        Submit review
+      <button type="button" onClick={handleSubmit} disabled={submitting}>
+        {submitting ? 'Submitting…' : 'Submit review'}
       </button>
     </section>
   )

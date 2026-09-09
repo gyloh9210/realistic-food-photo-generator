@@ -4,11 +4,17 @@ export function FinalReview(props: {
   imageUrl: string
   capped: boolean
   round: number
+  submitting?: boolean
   onSubmit: (payload: { status: 'approved' | 'rejected'; rejectReason?: string }) => void
 }) {
-  const { imageUrl, capped, round, onSubmit } = props
+  const { imageUrl, capped, round, submitting = false, onSubmit } = props
   const [rejectReason, setRejectReason] = useState('')
   const [showReasonField, setShowReasonField] = useState(false)
+
+  function submit(payload: { status: 'approved' | 'rejected'; rejectReason?: string }) {
+    if (submitting) return
+    onSubmit(payload)
+  }
 
   return (
     <section>
@@ -20,11 +26,11 @@ export function FinalReview(props: {
         </p>
       )}
       <img src={imageUrl} alt="Generated food photo" />
-      <button type="button" onClick={() => onSubmit({ status: 'approved' })}>
-        Approve
+      <button type="button" onClick={() => submit({ status: 'approved' })} disabled={submitting}>
+        {submitting ? 'Submitting…' : 'Approve'}
       </button>
       {!showReasonField ? (
-        <button type="button" onClick={() => setShowReasonField(true)}>
+        <button type="button" onClick={() => setShowReasonField(true)} disabled={submitting}>
           Reject
         </button>
       ) : (
@@ -37,7 +43,8 @@ export function FinalReview(props: {
           />
           <button
             type="button"
-            onClick={() => onSubmit({ status: 'rejected', rejectReason: rejectReason.trim() || undefined })}
+            onClick={() => submit({ status: 'rejected', rejectReason: rejectReason.trim() || undefined })}
+            disabled={submitting}
           >
             Confirm reject
           </button>
