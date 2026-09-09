@@ -19,19 +19,22 @@ describe('screenReferenceImages', () => {
 
   it('reads back the notes file the agent is instructed to write', async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'screen-refs-'))
-    const notesPath = path.join(dir, 'notes.json')
-    vi.mocked(cursorAgent.runCursorAgent).mockImplementation(async () => {
-      await writeFile(notesPath, JSON.stringify({ a: 'looks real' }))
-    })
+    try {
+      const notesPath = path.join(dir, 'notes.json')
+      vi.mocked(cursorAgent.runCursorAgent).mockImplementation(async () => {
+        await writeFile(notesPath, JSON.stringify({ a: 'looks real' }))
+      })
 
-    const result = await screenReferenceImages({
-      apiKey: 'k',
-      prompt: 'nasi lemak',
-      images: [{ id: 'a', sourceUrl: 'https://x/a.jpg', localPath: path.join(dir, 'a.jpg'), status: 'pending' }],
-      notesPath,
-    })
+      const result = await screenReferenceImages({
+        apiKey: 'k',
+        prompt: 'nasi lemak',
+        images: [{ id: 'a', sourceUrl: 'https://x/a.jpg', localPath: path.join(dir, 'a.jpg'), status: 'pending' }],
+        notesPath,
+      })
 
-    expect(result).toEqual({ a: 'looks real' })
-    await rm(dir, { recursive: true, force: true })
+      expect(result).toEqual({ a: 'looks real' })
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 })
