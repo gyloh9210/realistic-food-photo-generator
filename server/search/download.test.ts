@@ -5,13 +5,19 @@ import path from 'node:path'
 import { downloadImage } from './download.js'
 
 describe('downloadImage', () => {
-  afterEach(() => {
+  let tempDir: string | undefined
+
+  afterEach(async () => {
     vi.unstubAllGlobals()
+    if (tempDir) {
+      await rm(tempDir, { recursive: true, force: true })
+      tempDir = undefined
+    }
   })
 
   it('writes the fetched bytes to destPath, creating directories as needed', async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), 'download-test-'))
-    const dest = path.join(dir, 'nested', 'photo.jpg')
+    tempDir = await mkdtemp(path.join(tmpdir(), 'download-test-'))
+    const dest = path.join(tempDir, 'nested', 'photo.jpg')
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -23,7 +29,6 @@ describe('downloadImage', () => {
     await downloadImage('https://example.com/photo.jpg', dest)
 
     expect((await readFile(dest, 'utf8'))).toBe('fake-image-bytes')
-    await rm(dir, { recursive: true, force: true })
   })
 
   it('throws when the response is not ok', async () => {
