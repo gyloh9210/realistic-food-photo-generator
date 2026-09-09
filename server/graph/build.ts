@@ -60,24 +60,42 @@ function configFor(runId: string) {
 }
 
 async function invokeAndCapture(
-  input: Exclude<Parameters<typeof compiledGraph.invoke>[0], null>,
+  input: Parameters<typeof compiledGraph.invoke>[0],
   config: ReturnType<typeof configFor>,
 ): Promise<void> {
   try {
     await compiledGraph.invoke(input, config)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    await compiledGraph.updateState(config, { runStatus: 'failed', error: message })
+    try {
+      await compiledGraph.updateState(config, { runStatus: 'failed', error: message })
+    } catch {
+      // Nothing left to do — the checkpointer itself is unusable for this run.
+    }
   }
 }
 
+/**
+ * Starts a run without blocking on the graph's first interrupt (design spec,
+ * API contract: "Starts the graph asynchronously; does not block for the first
+ * interrupt.").
+ *
+ * The initial state is written into the checkpointer first and awaited, so
+ * `getRunSnapshot(runId)` is guaranteed to return a valid `working` snapshot
+ * the instant this resolves — the frontend navigates to the run page and
+ * starts polling immediately. Graph execution is then fired off unawaited;
+ * failures inside it are captured by `invokeAndCapture` and persisted as
+ * `runStatus: 'failed'`.
+ */
 export async function startRun(prompt: string): Promise<RunSnapshot> {
   const runId = randomUUID()
   const config = configFor(runId)
-  await invokeAndCapture(createInitialState(runId, prompt), config)
-  const snapshot = await getRunSnapshot(runId)
-  if (!snapshot) throw new Error(`Run ${runId} disappeared immediately after starting`)
-  return snapshot
+  const initialState = createInitialState(runId, prompt)
+  await compiledGraph.updateState(config, initialState)
+  // Fire-and-forget: the checkpoint above already holds the seeded state, so
+  // the graph continues from it with no further input.
+  void invokeAndCapture(null, config)
+  return { runId, state: toPublicRunState(initialState), pendingInterrupt: null }
 }
 
 export async function resumeRun(
