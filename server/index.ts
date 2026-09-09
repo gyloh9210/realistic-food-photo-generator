@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import express from 'express'
-import { PORT, RUNS_ROOT } from './env.js'
+import { PORT, RUNS_ROOT, RUN_FILES_URL_PREFIX } from './env.js'
 import { runsRouter } from './routes/runs.js'
 
 export const app = express()
@@ -11,7 +11,7 @@ app.get('/api/health', (_req, res) => {
 })
 
 app.use('/api/runs', runsRouter)
-app.use('/runs', express.static(RUNS_ROOT))
+app.use(RUN_FILES_URL_PREFIX, express.static(RUNS_ROOT))
 
 const isMainModule = import.meta.url === `file://${process.argv[1]}`
 if (isMainModule) {

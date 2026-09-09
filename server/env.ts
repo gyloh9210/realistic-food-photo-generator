@@ -14,7 +14,14 @@ export function runDir(runId: string): string {
   return path.join(RUNS_ROOT, runId)
 }
 
+/**
+ * URL prefix the Express app serves RUNS_ROOT files under. Deliberately NOT
+ * `/runs`, which is the frontend SPA route for a run page — sharing that
+ * prefix makes the Vite dev proxy swallow `/runs/:runId` navigations.
+ */
+export const RUN_FILES_URL_PREFIX = '/run-files'
+
 export function toPublicPath(absolutePath: string): string {
   const relative = path.relative(RUNS_ROOT, absolutePath).split(path.sep).join('/')
-  return `/runs/${relative}`
+  return `${RUN_FILES_URL_PREFIX}/${relative}`
 }

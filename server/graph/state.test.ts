@@ -37,8 +37,8 @@ describe('toPublicRunState', () => {
     expect(publicState).not.toHaveProperty('lastReferenceOutcome')
     expect(publicState).not.toHaveProperty('lastFinalOutcome')
     expect((publicState.referenceImages as { localPath: string }[])[0].localPath).toBe(
-      '/runs/run-1/references/a.jpg',
+      '/run-files/run-1/references/a.jpg',
     )
-    expect(publicState.generatedImagePath).toBe('/runs/run-1/generated/attempt-0.png')
+    expect(publicState.generatedImagePath).toBe('/run-files/run-1/generated/attempt-0.png')
   })
 })
