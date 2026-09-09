@@ -28,10 +28,16 @@ export function decideReferenceOutcome(params: {
   runStatus: RunStatus
 }): ReferenceReviewOutcome {
   const { referenceImages, referenceRound, runStatus } = params
-  const allApproved =
-    referenceImages.length > 0 && referenceImages.every((image) => image.status === 'approved')
+  const approvedCount = referenceImages.filter((image) => image.status === 'approved').length
+  const allApproved = referenceImages.length > 0 && approvedCount === referenceImages.length
   if (allApproved) return 'proceed'
-  if (runStatus === 'capped-references') return 'abandon'
+  if (runStatus === 'capped-references') {
+    // Design spec: once capped, "the human can still approve any existing
+    // candidate to proceed" — a partial approval is enough, since
+    // writeGenerationPrompt only grounds on the approved subset anyway. Only a
+    // review that approves nothing abandons the run.
+    return approvedCount > 0 ? 'proceed' : 'abandon'
+  }
   if (referenceRound >= MAX_ROUNDS) return 'hold-capped'
   return 'retry'
 }

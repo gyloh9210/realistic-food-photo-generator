@@ -76,9 +76,40 @@ describe('decideReferenceOutcome', () => {
     expect(outcome).toBe('hold-capped')
   })
 
-  it('abandons when already capped and still not all approved', () => {
+  it('abandons when already capped and nothing at all was approved', () => {
     const outcome = decideReferenceOutcome({
-      referenceImages: [image('a', { status: 'rejected' })],
+      referenceImages: [image('a', { status: 'rejected' }), image('b', { status: 'rejected' })],
+      referenceRound: MAX_ROUNDS,
+      runStatus: 'capped-references',
+    })
+    expect(outcome).toBe('abandon')
+  })
+
+  it('proceeds when already capped and the human approved only some of the candidates', () => {
+    const outcome = decideReferenceOutcome({
+      referenceImages: [
+        image('a', { status: 'approved' }),
+        image('b', { status: 'rejected', rejectReason: 'AI-looking' }),
+        image('c', { status: 'pending' }),
+      ],
+      referenceRound: MAX_ROUNDS,
+      runStatus: 'capped-references',
+    })
+    expect(outcome).toBe('proceed')
+  })
+
+  it('still retries on a partial approval when NOT yet capped', () => {
+    const outcome = decideReferenceOutcome({
+      referenceImages: [image('a', { status: 'approved' }), image('b', { status: 'rejected' })],
+      referenceRound: 1,
+      runStatus: 'working',
+    })
+    expect(outcome).toBe('retry')
+  })
+
+  it('abandons when already capped and every candidate is left pending', () => {
+    const outcome = decideReferenceOutcome({
+      referenceImages: [image('a'), image('b')],
       referenceRound: MAX_ROUNDS,
       runStatus: 'capped-references',
     })

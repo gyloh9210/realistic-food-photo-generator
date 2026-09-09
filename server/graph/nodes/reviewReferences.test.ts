@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { StateGraph, START, END, MemorySaver, Command } from '@langchain/langgraph'
 import { RunAnnotation, createInitialState } from '../state.js'
 import { reviewReferences } from './reviewReferences.js'
+import type { ReferenceImage } from '../../../shared/types.js'
 
 function buildTestGraph() {
   return new StateGraph(RunAnnotation)
@@ -46,6 +47,37 @@ describe('reviewReferences', () => {
     expect(finished.values.runStatus).toBe('working')
     expect(finished.values.lastReferenceOutcome).toBe('retry')
     expect(finished.values.excludedSourceUrls).toEqual(['https://x/a.jpg'])
+  })
+
+  it('proceeds with the approved subset when capped and only some are approved', async () => {
+    const graph = buildTestGraph()
+    const config = { configurable: { thread_id: 't4' } }
+    const initial = createInitialState('run-4', 'nasi lemak')
+    initial.referenceImages = [
+      { id: 'a', sourceUrl: 'https://x/a.jpg', localPath: '/tmp/a.jpg', status: 'pending' },
+      { id: 'b', sourceUrl: 'https://x/b.jpg', localPath: '/tmp/b.jpg', status: 'pending' },
+    ]
+    initial.referenceRound = 5
+    initial.runStatus = 'capped-references'
+
+    await graph.invoke(initial, config)
+    await graph.invoke(
+      new Command({
+        resume: {
+          decisions: [
+            { id: 'a', status: 'approved' },
+            { id: 'b', status: 'rejected', rejectReason: 'AI-looking' },
+          ],
+        },
+      }),
+      config,
+    )
+    const finished = await graph.getState(config)
+    expect(finished.values.lastReferenceOutcome).toBe('proceed')
+    expect(finished.values.runStatus).toBe('working')
+    expect(
+      finished.values.referenceImages.filter((image: ReferenceImage) => image.status === 'approved'),
+    ).toHaveLength(1)
   })
 
   it('abandons when already capped and rejected again', async () => {
