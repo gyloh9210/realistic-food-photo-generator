@@ -7,11 +7,10 @@ fried chicken") and produces a single photorealistic food photo, avoiding the
 common tells of AI-generated ("slop") images — waxy textures, perfect
 symmetry, fake bokeh, nonsense garnish, oversaturated color grading, etc.
 
-Unlike the reference project (`recipe-website`, which generates a full recipe
-page with multiple image slots and no human review), this app is narrowly
-scoped to one prompt → one verified photo, with two human-in-the-loop
-approval gates and a reference-photo grounding step for the generation
-prompt.
+The pipeline grounds the final generation prompt in real reference photos
+(found on the web, human-vetted) rather than generating from the text prompt
+alone, and puts a human in the loop at two points: approving the reference
+photos used for grounding, and approving the final generated image.
 
 ## Non-goals
 
@@ -20,18 +19,59 @@ prompt.
 - No production-grade persistence — this is a self-learning project run
   locally.
 
-## Prior art reused
+## Anti-slop prompt guidance
 
-`recipe-website`'s `recipe-creation-workflow/agents/image-illustrator.md`
-and `image-validator.md` contain a proven anti-slop prompt scaffold (stage,
-texture, light, camera, explicit negatives) and scoring rubric. This design
-adapts that scaffold rather than writing it from scratch; the actual
-rejection/approval decision here is made by a human instead of an automatic
-score, per the user's requirement for human-in-the-loop review.
+This is the core knowledge the `writeGenerationPrompt` agent's system prompt
+must encode. Core principle: if a human food photographer would not take the
+shot this way, don't generate it this way. Real food photography has
+physical logic, imperfection, and a specific cooking/plating stage; AI slop
+ignores all three.
+
+**Prompt scaffold** — build the generation prompt from these parts, in
+order:
+1. **Stage-specific description of the dish** (finished plated state, exact
+   garnish/components) — not a generic "delicious food" description.
+2. **Material/texture cues** — e.g. piece sizes vary 15–30%, matte patches
+   next to glossy ones, sauce pooling thicker in some spots with a thin oil
+   sheen, not uniform gloss.
+3. **Light direction** — one consistent, physically plausible source (e.g.
+   soft natural light from the left, a slight hot spot, asymmetric shadow
+   falloff).
+4. **Camera style** — e.g. 50mm lens, shallow but slightly uneven depth-of-
+   field falloff, a touch of sensor grain, faint chromatic aberration at
+   high-contrast edges.
+5. **Explicit negatives** — no identical pieces/dice, no radial or
+   symmetrical plating, no algorithmic garnish scatter, no thick centered
+   steam plume, no tiled/repeating background texture, no plastic texture,
+   no oversaturation, no floating ingredients, no readable label text or
+   logos.
+
+**Hard avoid list** (feed into both the prompt-writer and the reference
+screening step as things to flag):
+- Waxy, glossy, airbrushed food; plastic or rubbery textures; perfectly
+  uniform browning or mincing.
+- Oversaturated/neon colors; a single AI color-grade skew (heavy teal-orange,
+  all-amber, magenta-cyan).
+- Steam or liquids defying physics (symmetrical plumes, drips that don't
+  pool, sauce frozen mid-air); duplicated or floating garnish.
+- Malformed hands/utensils; wrong proportions (pan vs. stove, portion vs.
+  plate).
+- Radial/symmetrical plating; studio-perfect crumbs or garnish rings;
+  repeating/tiled background patterns.
+- Readable text, logos, or watermarks on packaging or dishware.
+- Product-shot-perfect uniform lighting with no natural asymmetry.
+
+**Appetite checklist** — before accepting a generation prompt or a generated
+image, it should pass: food looks edible (not a render); textures are
+visually distinguishable; colors are warm/natural and match real ingredient
+colors; composition draws the eye to the food; no artifacts (melted
+utensils, extra limbs, garbled text, impossible physics); natural
+irregularity is visible (varied piece sizes, hand-scattered garnish, uneven
+sauce pooling, non-perfect lighting).
 
 ## Stack
 
-- **Frontend**: Vite + React + TypeScript (mirrors `recipe-website`).
+- **Frontend**: Vite + React + TypeScript.
 - **Backend**: Node + Express (or Fastify) API server, separate process from
   the Vite dev server (Vite proxies `/api` to it in dev).
 - **Orchestration**: LangGraph.js `StateGraph`, using its `interrupt()` /
@@ -40,15 +80,14 @@ score, per the user's requirement for human-in-the-loop review.
   during a paused review loses that run's progress — acceptable for a
   solo/local project. Revisit (e.g. SQLite saver) if that becomes annoying.
 - **Image generation & vision reasoning**: `@cursor/sdk` `Agent` (model
-  `composer-2.5`, same as `recipe-website`), using its built-in
-  `generateImage` tool for pixel generation and local file reads for vision
-  tasks (screening reference photos, writing the generation prompt).
-  Requires `CURSOR_API_KEY`.
+  `composer-2.5`), using its built-in `generateImage` tool for pixel
+  generation and local file reads for vision tasks (screening reference
+  photos, writing the generation prompt). Requires `CURSOR_API_KEY`.
 - **Reference image search**: Openverse API and/or Wikimedia Commons API —
-  both free, keyless, return direct image URLs. No Tavily, no Cursor
-  `webSearch` (ruled out: `webSearch` is a general-purpose tool, not a
-  dedicated image-search endpoint, and its reliability for surfacing direct
-  image URLs is unverified).
+  both free, keyless, return direct image URLs. Not using Cursor's built-in
+  `webSearch` tool: it's a general-purpose tool, not a dedicated
+  image-search endpoint, and its reliability for surfacing direct image URLs
+  is unverified.
 
 ## Repo structure
 
@@ -57,7 +96,7 @@ langgraph-ai-image-generator/
 ├── server/
 │   ├── graph/            # StateGraph definition, state schema, conditional edges
 │   ├── agents/            # Cursor SDK Agent wrappers: screenReferences, writeGenerationPrompt, generateImage
-│   ├── prompts/           # System prompts for each Cursor agent (adapted from image-illustrator.md)
+│   ├── prompts/           # System prompts for each Cursor agent (anti-slop guidance above)
 │   ├── search/            # Openverse/Wikimedia client
 │   └── index.ts           # Express app, routes, MemorySaver-backed graph runner
 ├── src/                   # Vite + React frontend
@@ -105,8 +144,8 @@ type RunState = {
 2. **`screenReferences`** (Cursor SDK Agent, vision, local files, no
    generation tools) — opens each newly downloaded candidate and writes a
    one-line `cursorNote`: does it look like a real photo vs. likely
-   AI-generated, and is it relevant to `prompt`. Advisory only — does not set
-   `status`.
+   AI-generated, and is it relevant to `prompt`, using the hard-avoid-list
+   cues above. Advisory only — does not set `status`.
 3. **`interrupt: reviewReferences`** — pauses the graph (`runStatus:
    'paused-references'`). Frontend shows all `referenceImages` (thumbnail +
    `cursorNote`) for the human to set `status`/`rejectReason` per image.
@@ -122,11 +161,9 @@ type RunState = {
    - If all `approved`: proceed to `writeGenerationPrompt`.
 5. **`writeGenerationPrompt`** (Cursor SDK Agent, vision) — reads all
    `approved` reference images, `prompt`, and (on a retry) `finalRejectReason`.
-   Writes `generationPrompt`, applying the anti-slop scaffold from
-   `image-illustrator.md` (stage-specific action, texture/material cues,
-   light direction, camera style, explicit negatives), grounded in what it
-   observed in the approved reference photos rather than invented from the
-   text prompt alone.
+   Writes `generationPrompt`, applying the anti-slop prompt scaffold above,
+   grounded in what it observed in the approved reference photos rather than
+   invented from the text prompt alone.
 6. **`generateImage`** (Cursor SDK Agent, `generateImage` tool) — generates
    from `generationPrompt`, saves to `runs/{id}/generated/`, sets
    `generatedImagePath`.
@@ -179,10 +216,10 @@ rejection (not the first attempt).
   `error` populated. No automatic retry; the human resubmits a new prompt.
 - Fewer than 5 candidates found is not an error — proceed with however many
   were found; the human can approve fewer than 5.
-- Cursor Agent calls use a bounded polling timeout (as in
-  `recipe-creation-workflow/server/test-generate-image.ts`'s
-  `findGeneratedPng`) so a hung agent surfaces as a failed run rather than
-  wedging indefinitely.
+- Cursor Agent calls run under a bounded polling timeout when waiting for
+  expected output files (e.g. poll for the generated PNG for a few seconds,
+  then fail) so a hung agent surfaces as a failed run rather than wedging
+  indefinitely.
 
 ## Testing
 
@@ -202,7 +239,7 @@ rejection (not the first attempt).
   thin; the search node handles this by returning fewer candidates rather
   than failing, but very obscure prompts may be hard to ground in real
   references at all.
-- Cursor SDK's vision capability for reading local image files is assumed
-  based on `image-validator.md`'s existing (currently-disabled) design in
-  `recipe-website`, not yet exercised in this new codebase — first
-  implementation pass should confirm it directly.
+- Cursor SDK's vision capability for reading local image files (needed for
+  `screenReferences` and `writeGenerationPrompt`) has not yet been exercised
+  in this codebase — first implementation pass should confirm it directly
+  before building the rest of the pipeline on top of it.
