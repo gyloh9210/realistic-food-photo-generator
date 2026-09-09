@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { StateGraph, START, END, MemorySaver, Command } from '@langchain/langgraph'
+import { StateGraph, START, MemorySaver, Command, type StateSnapshot } from '@langchain/langgraph'
 import { RunAnnotation, createInitialState, toPublicRunState, type GraphState } from './state.js'
 import { searchReferences } from './nodes/searchReferences.js'
 import { screenReferencesNode } from './nodes/screenReferences.js'
@@ -38,7 +38,7 @@ const compiledGraph = new StateGraph(RunAnnotation)
 type ReferencesInterruptValue = { type: 'references'; images: ReferenceImage[]; capped: boolean }
 type FinalInterruptValue = { type: 'final'; imagePath: string; capped: boolean }
 
-function pendingInterruptFrom(tasks: { interrupts: { value: unknown }[] }[]): PendingInterrupt {
+function pendingInterruptFrom(tasks: StateSnapshot['tasks']): PendingInterrupt {
   for (const task of tasks) {
     for (const item of task.interrupts) {
       const value = item.value as ReferencesInterruptValue | FinalInterruptValue
@@ -59,7 +59,10 @@ function configFor(runId: string) {
   return { configurable: { thread_id: runId } }
 }
 
-async function invokeAndCapture(input: unknown, config: ReturnType<typeof configFor>): Promise<void> {
+async function invokeAndCapture(
+  input: Exclude<Parameters<typeof compiledGraph.invoke>[0], null>,
+  config: ReturnType<typeof configFor>,
+): Promise<void> {
   try {
     await compiledGraph.invoke(input, config)
   } catch (error) {

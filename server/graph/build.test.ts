@@ -35,7 +35,8 @@ describe('the full run graph', () => {
     const started = await startRun('nasi lemak with fried chicken')
     expect(started.state.runStatus).toBe('paused-references')
     expect(started.pendingInterrupt?.type).toBe('references')
-    const images = started.pendingInterrupt!.type === 'references' ? started.pendingInterrupt.images : []
+    const startedInterrupt = started.pendingInterrupt
+    const images = startedInterrupt?.type === 'references' ? startedInterrupt.images : []
     expect(images).toHaveLength(5)
 
     const afterReferences = await resumeRun(started.runId, {
@@ -51,7 +52,8 @@ describe('the full run graph', () => {
 
   it('loops once on a reference rejection before proceeding', async () => {
     const started = await startRun('nasi lemak with fried chicken')
-    const images = started.pendingInterrupt!.type === 'references' ? started.pendingInterrupt.images : []
+    const startedInterrupt = started.pendingInterrupt
+    const images = startedInterrupt?.type === 'references' ? startedInterrupt.images : []
 
     const afterReject = await resumeRun(started.runId, {
       decisions: [
@@ -72,7 +74,8 @@ describe('the full run graph', () => {
 
   it('loops once on a final-image rejection before finishing', async () => {
     const started = await startRun('nasi lemak with fried chicken')
-    const images = started.pendingInterrupt!.type === 'references' ? started.pendingInterrupt.images : []
+    const startedInterrupt = started.pendingInterrupt
+    const images = startedInterrupt?.type === 'references' ? startedInterrupt.images : []
     const afterReferences = await resumeRun(started.runId, {
       decisions: images.map((image) => ({ id: image.id, status: 'approved' as const })),
     })
