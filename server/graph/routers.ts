@@ -17,3 +17,20 @@ export function routeAfterReviewReferences(
       return 'searchReferences'
   }
 }
+
+export function routeAfterReviewFinal(
+  state: GraphState,
+): 'writeGenerationPrompt' | 'reviewFinal' | typeof END {
+  switch (state.lastFinalOutcome) {
+    case 'done':
+      return END
+    case 'retry':
+      return 'writeGenerationPrompt'
+    case 'hold-capped':
+      return 'reviewFinal'
+    case 'abandon':
+      return END
+    default:
+      return 'writeGenerationPrompt'
+  }
+}
