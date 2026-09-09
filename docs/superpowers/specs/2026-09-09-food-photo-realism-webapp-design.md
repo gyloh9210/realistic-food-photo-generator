@@ -69,6 +69,15 @@ utensils, extra limbs, garbled text, impossible physics); natural
 irregularity is visible (varied piece sizes, hand-scattered garnish, uneven
 sauce pooling, non-perfect lighting).
 
+**Few-shot slop examples** — `server/prompts/ai-slop-examples/` holds a
+small curated set of real AI-slop food photos (provided by the project
+owner) plus `annotations.md`, which explains for each image specifically why
+it's slop, tied back to a category above (texture, color, physics, staging,
+etc.). Both `screenReferences` and `writeGenerationPrompt` are instructed to
+read these images and annotations as calibration counter-examples before
+doing their judgment/writing — this is few-shot visual grounding for
+judgment, not an exact-match blocklist against these specific files.
+
 ## Stack
 
 - **Frontend**: Vite + React + TypeScript.
@@ -97,6 +106,7 @@ langgraph-ai-image-generator/
 │   ├── graph/            # StateGraph definition, state schema, conditional edges
 │   ├── agents/            # Cursor SDK Agent wrappers: screenReferences, writeGenerationPrompt, generateImage
 │   ├── prompts/           # System prompts for each Cursor agent (anti-slop guidance above)
+│   │   └── ai-slop-examples/  # 5 example slop photos + annotations.md explaining why each is slop
 │   ├── search/            # Openverse/Wikimedia client
 │   └── index.ts           # Express app, routes, MemorySaver-backed graph runner
 ├── src/                   # Vite + React frontend
@@ -142,10 +152,11 @@ type RunState = {
    candidates to bring the unresolved (`pending`) count up to 5, saving them
    under `runs/{id}/references/`.
 2. **`screenReferences`** (Cursor SDK Agent, vision, local files, no
-   generation tools) — opens each newly downloaded candidate and writes a
-   one-line `cursorNote`: does it look like a real photo vs. likely
-   AI-generated, and is it relevant to `prompt`, using the hard-avoid-list
-   cues above. Advisory only — does not set `status`.
+   generation tools) — first reads the few-shot slop examples
+   (`ai-slop-examples/`) for calibration, then opens each newly downloaded
+   candidate and writes a one-line `cursorNote`: does it look like a real
+   photo vs. likely AI-generated, and is it relevant to `prompt`, using the
+   hard-avoid-list cues above. Advisory only — does not set `status`.
 3. **`interrupt: reviewReferences`** — pauses the graph (`runStatus:
    'paused-references'`). Frontend shows all `referenceImages` (thumbnail +
    `cursorNote`) for the human to set `status`/`rejectReason` per image.
@@ -159,11 +170,12 @@ type RunState = {
      candidate to proceed, but a further reject now sets `runStatus:
      'abandoned'` (terminal) instead of looping.
    - If all `approved`: proceed to `writeGenerationPrompt`.
-5. **`writeGenerationPrompt`** (Cursor SDK Agent, vision) — reads all
-   `approved` reference images, `prompt`, and (on a retry) `finalRejectReason`.
-   Writes `generationPrompt`, applying the anti-slop prompt scaffold above,
-   grounded in what it observed in the approved reference photos rather than
-   invented from the text prompt alone.
+5. **`writeGenerationPrompt`** (Cursor SDK Agent, vision) — reads the
+   few-shot slop examples (`ai-slop-examples/`), all `approved` reference
+   images, `prompt`, and (on a retry) `finalRejectReason`. Writes
+   `generationPrompt`, applying the anti-slop prompt scaffold above, grounded
+   in what it observed in the approved reference photos rather than invented
+   from the text prompt alone.
 6. **`generateImage`** (Cursor SDK Agent, `generateImage` tool) — generates
    from `generationPrompt`, saves to `runs/{id}/generated/`, sets
    `generatedImagePath`.
