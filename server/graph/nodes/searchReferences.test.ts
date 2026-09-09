@@ -40,6 +40,48 @@ describe('searchReferences', () => {
     expect(result.referenceImages?.[0]).toMatchObject({ id: 'a', status: 'approved' })
   })
 
+  it('keeps the successful downloads when one candidate fails to download', async () => {
+    vi.mocked(searchIndex.findReferenceCandidates).mockResolvedValue(
+      Array.from({ length: 5 }, (_v, i) => ({ sourceUrl: `https://x/${i}.jpg` })),
+    )
+    vi.mocked(download.downloadImage).mockImplementation(async (url: string) => {
+      if (url === 'https://x/2.jpg') throw new Error('Failed to download image from https://x/2.jpg: 403 Forbidden')
+    })
+
+    const state = createInitialState('run-1', 'nasi lemak')
+    const result = await searchReferences(state)
+
+    expect(result.referenceImages).toHaveLength(4)
+    expect(result.referenceImages?.map((image) => image.sourceUrl)).not.toContain('https://x/2.jpg')
+    expect(result.referenceImages?.every((image) => image.status === 'pending')).toBe(true)
+  })
+
+  it('returns only the already-approved images when every new download fails', async () => {
+    vi.mocked(searchIndex.findReferenceCandidates).mockResolvedValue([
+      { sourceUrl: 'https://x/dead-1.jpg' },
+      { sourceUrl: 'https://x/dead-2.jpg' },
+    ])
+    vi.mocked(download.downloadImage).mockRejectedValue(new Error('404 Not Found'))
+
+    const state = createInitialState('run-1', 'nasi lemak')
+    state.referenceImages = [
+      { id: 'a', sourceUrl: 'https://x/a.jpg', localPath: '/tmp/a.jpg', status: 'approved' },
+    ]
+
+    await expect(searchReferences(state)).resolves.toMatchObject({
+      referenceImages: [{ id: 'a', status: 'approved' }],
+    })
+  })
+
+  it('returns an empty candidate list rather than throwing when nothing downloads at all', async () => {
+    vi.mocked(searchIndex.findReferenceCandidates).mockResolvedValue([{ sourceUrl: 'https://x/dead.jpg' }])
+    vi.mocked(download.downloadImage).mockRejectedValue(new Error('403 Forbidden'))
+
+    const state = createInitialState('run-1', 'nasi lemak')
+
+    await expect(searchReferences(state)).resolves.toEqual({ referenceImages: [] })
+  })
+
   it('does not call search when 5 images are already approved', async () => {
     const state = createInitialState('run-1', 'nasi lemak')
     state.referenceImages = Array.from({ length: 5 }, (_v, i) => ({
