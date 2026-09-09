@@ -27,15 +27,17 @@ describe('runCursorAgent', () => {
 
   it('throws when the run status is error', async () => {
     const send = vi.fn().mockResolvedValue({ wait: () => Promise.resolve({ status: 'error', id: 'r2' }) })
+    const dispose = vi.fn().mockResolvedValue(undefined)
     vi.mocked(Agent.create).mockResolvedValue({
       send,
       close: vi.fn(),
-      [Symbol.asyncDispose]: vi.fn().mockResolvedValue(undefined),
+      [Symbol.asyncDispose]: dispose,
     } as never)
 
     await expect(runCursorAgent({ apiKey: 'k', systemPrompt: 'sys', task: 'do it' })).rejects.toThrow(
       'Cursor agent run failed (r2)',
     )
+    expect(dispose).toHaveBeenCalled()
   })
 
   it('disposes the agent even when send() throws', async () => {
@@ -52,35 +54,46 @@ describe('runCursorAgent', () => {
 
   it('times out if the run never resolves', async () => {
     const send = vi.fn().mockResolvedValue({ wait: () => new Promise(() => {}) })
+    const dispose = vi.fn().mockResolvedValue(undefined)
     vi.mocked(Agent.create).mockResolvedValue({
       send,
       close: vi.fn(),
-      [Symbol.asyncDispose]: vi.fn().mockResolvedValue(undefined),
+      [Symbol.asyncDispose]: dispose,
     } as never)
 
     await expect(
       runCursorAgent({ apiKey: 'k', systemPrompt: 'sys', task: 'do it', timeoutMs: 50 }),
     ).rejects.toThrow('timed out')
+    expect(dispose).toHaveBeenCalled()
   })
 })
 
 describe('waitForFile', () => {
+  const dirsToClean: string[] = []
+
+  afterEach(async () => {
+    for (const dir of dirsToClean) {
+      await rm(dir, { recursive: true, force: true })
+    }
+    dirsToClean.length = 0
+  })
+
   it('resolves once the file appears', async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'cursor-agent-test-'))
+    dirsToClean.push(dir)
     const target = path.join(dir, 'out.txt')
     setTimeout(() => {
       void writeFile(target, 'done')
     }, 100)
 
     await expect(waitForFile(target, 2_000)).resolves.toBeUndefined()
-    await rm(dir, { recursive: true, force: true })
   })
 
   it('rejects if the file never appears within the timeout', async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'cursor-agent-test-'))
+    dirsToClean.push(dir)
     const target = path.join(dir, 'missing.txt')
     await expect(waitForFile(target, 300)).rejects.toThrow('Timed out waiting for file')
-    await rm(dir, { recursive: true, force: true })
   })
 })
 
