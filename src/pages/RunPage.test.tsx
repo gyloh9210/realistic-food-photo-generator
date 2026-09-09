@@ -81,4 +81,26 @@ describe('RunPage', () => {
     renderRunPage()
     expect(await screen.findByRole('alert')).toHaveTextContent('cursor unavailable')
   })
+
+  it('recovers from a transient poll failure once a later poll succeeds', async () => {
+    const workingSnapshot: RunSnapshot = { runId: 'run-1', state: baseState({ runStatus: 'working' }), pendingInterrupt: null }
+    const doneSnapshot: RunSnapshot = {
+      runId: 'run-1',
+      state: baseState({ runStatus: 'done', generatedImagePath: '/runs/1/generated/attempt-0.png' }),
+      pendingInterrupt: null,
+    }
+    vi.spyOn(api, 'fetchRun')
+      .mockResolvedValueOnce(workingSnapshot)
+      .mockRejectedValueOnce(new Error('network blip'))
+      .mockResolvedValueOnce(doneSnapshot)
+
+    renderRunPage()
+
+    expect(await screen.findByText('Working…')).toBeInTheDocument()
+    expect(await screen.findByRole('alert', {}, { timeout: 3000 })).toHaveTextContent('network blip')
+    expect(
+      await screen.findByRole('img', { name: 'Final food photo' }, { timeout: 3000 }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  }, 10000)
 })

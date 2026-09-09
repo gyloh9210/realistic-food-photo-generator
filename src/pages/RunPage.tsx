@@ -17,6 +17,7 @@ export function RunPage() {
     try {
       const next = await fetchRun(runId)
       setSnapshot(next)
+      setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load run')
     }
