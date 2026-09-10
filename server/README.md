@@ -29,7 +29,8 @@ everything else here is plain TypeScript.
 - **`@cursor/sdk`** — the only thing that touches an actual model. Every
   Cursor call goes through the single wrapper in
   [`agents/cursorAgent.ts`](agents/cursorAgent.ts) (`runCursorAgent`), which
-  always uses model `composer-2.5`, always runs with `local: { cwd:
+  uses the model id from the `CURSOR_MODEL` env var (defaults to
+  `composer-2.5` if unset — see `CURSOR_MODEL` in `env.ts`), always runs with `local: { cwd:
   REPO_ROOT }` (the repo root, not a per-run directory — this is what lets
   one agent invocation read both `runs/{id}/...` and
   `prompts/ai-slop-examples/...` in the same call), and never restricts the
@@ -100,7 +101,9 @@ npm run dev:server     # tsx watch server/index.ts — Express on :8787
 ```
 
 Requires `CURSOR_API_KEY` in a `.env` file at the repo root (copy
-`.env.example`). `PORT` defaults to `8787`.
+`.env.example`). `PORT` defaults to `8787`; `CURSOR_MODEL` defaults to
+`composer-2.5` if unset — set it to swap the model used for every agent
+call.
 
 Run just this directory's tests:
 

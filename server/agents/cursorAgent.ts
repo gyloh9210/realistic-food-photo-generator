@@ -1,9 +1,9 @@
 import path from 'node:path'
 import { stat } from 'node:fs/promises'
 import { Agent } from '@cursor/sdk'
-import { REPO_ROOT } from '../env.js'
+import { CURSOR_MODEL, REPO_ROOT } from '../env.js'
 
-const MODEL = { id: 'composer-2.5' } as const
+const MODEL = { id: CURSOR_MODEL }
 
 export function toRepoRelative(absolutePath: string): string {
   return path.relative(REPO_ROOT, absolutePath)

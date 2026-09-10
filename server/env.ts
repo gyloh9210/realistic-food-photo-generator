@@ -3,6 +3,7 @@ import path from 'node:path'
 export const REPO_ROOT = process.cwd()
 export const RUNS_ROOT = path.join(REPO_ROOT, 'runs')
 export const PORT = Number(process.env.PORT ?? 8787)
+export const CURSOR_MODEL = process.env.CURSOR_MODEL?.trim() || 'composer-2.5'
 
 export function getCursorApiKey(): string {
   const key = process.env.CURSOR_API_KEY?.trim()
