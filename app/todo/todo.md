@@ -1,0 +1,5 @@
+- food photo generator
+-- need to remove duplicated images when researching (plan)
+-- add visual check for button when approved (plan)
+-- add visual check of how the node in graph works (plan)
+- menu/promotional banner generator with food photo
