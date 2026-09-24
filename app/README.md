@@ -79,7 +79,7 @@ runs/{runId}/           # Downloaded reference photos + generated images for eac
 
 ```bash
 npm install
-cp .env.example .env   # set CURSOR_API_KEY
+cp .env.example .env   # in app/ — set CURSOR_API_KEY
 npm run dev
 ```
 

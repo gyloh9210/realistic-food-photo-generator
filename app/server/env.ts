@@ -1,13 +1,21 @@
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import dotenv from 'dotenv'
 
-export const REPO_ROOT = process.cwd()
+const serverDir = path.dirname(fileURLToPath(import.meta.url))
+export const APP_ROOT = path.join(serverDir, '..')
+
+dotenv.config({ path: path.join(APP_ROOT, '.env') })
+
+/** App package root (run `npm` commands from `app/`). */
+export const REPO_ROOT = APP_ROOT
 export const RUNS_ROOT = path.join(REPO_ROOT, 'runs')
 export const PORT = Number(process.env.PORT ?? 8787)
 export const CURSOR_MODEL = process.env.CURSOR_MODEL?.trim() || 'composer-2.5'
 
 export function getCursorApiKey(): string {
   const key = process.env.CURSOR_API_KEY?.trim()
-  if (!key) throw new Error('CURSOR_API_KEY is missing. Add it to .env.')
+  if (!key) throw new Error('CURSOR_API_KEY is missing. Add it to app/.env.')
   return key
 }
 

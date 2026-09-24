@@ -100,8 +100,7 @@ off):
 npm run dev:server     # tsx watch server/index.ts — Express on :8787
 ```
 
-Requires `CURSOR_API_KEY` in a `.env` file at the repo root (copy
-`.env.example`). `PORT` defaults to `8787`; `CURSOR_MODEL` defaults to
+Requires `CURSOR_API_KEY` in `app/.env` (copy `app/.env.example`). `PORT` defaults to `8787`; `CURSOR_MODEL` defaults to
 `composer-2.5` if unset — set it to swap the model used for every agent
 call.
 

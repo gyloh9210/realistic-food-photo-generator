@@ -3,6 +3,10 @@ node_modules/
 dist/
 .env
 .env.local
+app/.env
+app/.env.local
+agent-workflow/.env
+agent-workflow/.env.local
 runs/
 .worktrees/
 agent-workflow/data/

@@ -1,4 +1,4 @@
-import 'dotenv/config'
+import './env.js'
 import express from 'express'
 import { PORT, RUNS_ROOT, RUN_FILES_URL_PREFIX } from './env.js'
 import { runsRouter } from './routes/runs.js'

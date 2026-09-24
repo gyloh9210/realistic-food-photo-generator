@@ -4,8 +4,8 @@ Local tool to run **engineer** agents on feature specs in isolated git worktrees
 
 ## Quick start
 
-1. Set `CURSOR_API_KEY` in the **repo root** `.env` (see [`.env.example`](../.env.example)).
-2. Optional: `AGENT_WORKFLOW_ENGINEER_MODEL`, `AGENT_WORKFLOW_MAX_CONCURRENT`, `AGENT_WORKFLOW_PORT`.
+1. Copy [`.env.example`](.env.example) to `agent-workflow/.env` and set `CURSOR_API_KEY`.
+2. Optional in the same file: `AGENT_WORKFLOW_ENGINEER_MODEL`, `AGENT_WORKFLOW_MAX_CONCURRENT`, `AGENT_WORKFLOW_PORT`.
 3. Install and run:
 
 ```bash

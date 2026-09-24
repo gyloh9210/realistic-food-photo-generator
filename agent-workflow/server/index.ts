@@ -1,3 +1,4 @@
+import './env.js'
 import express from 'express'
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'

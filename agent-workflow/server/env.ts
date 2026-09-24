@@ -6,7 +6,6 @@ const serverDir = path.dirname(fileURLToPath(import.meta.url))
 export const WORKFLOW_ROOT = path.join(serverDir, '..')
 export const REPO_ROOT = path.join(WORKFLOW_ROOT, '..')
 
-dotenv.config({ path: path.join(REPO_ROOT, '.env') })
 dotenv.config({ path: path.join(WORKFLOW_ROOT, '.env') })
 
 export const PORT = Number(process.env.AGENT_WORKFLOW_PORT ?? 3001)
@@ -40,7 +39,7 @@ export const WORKTREES_DIR = path.join(REPO_ROOT, '.worktrees')
 
 export function getCursorApiKey(): string {
   const key = process.env.CURSOR_API_KEY?.trim()
-  if (!key) throw new Error('CURSOR_API_KEY is missing. Add it to the repo root .env.')
+  if (!key) throw new Error('CURSOR_API_KEY is missing. Add it to agent-workflow/.env.')
   return key
 }
 
