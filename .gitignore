@@ -3,8 +3,8 @@ node_modules/
 dist/
 .env
 .env.local
-app/.env
-app/.env.local
+food-photo-generator/.env
+food-photo-generator/.env.local
 agent-workflow/.env
 agent-workflow/.env.local
 runs/

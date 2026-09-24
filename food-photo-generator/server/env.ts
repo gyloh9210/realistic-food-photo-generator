@@ -7,7 +7,7 @@ export const APP_ROOT = path.join(serverDir, '..')
 
 dotenv.config({ path: path.join(APP_ROOT, '.env') })
 
-/** App package root (run `npm` commands from `app/`). */
+/** App package root (run `npm` commands from `food-photo-generator/`). */
 export const REPO_ROOT = APP_ROOT
 export const RUNS_ROOT = path.join(REPO_ROOT, 'runs')
 export const PORT = Number(process.env.PORT ?? 8787)
@@ -15,7 +15,7 @@ export const CURSOR_MODEL = process.env.CURSOR_MODEL?.trim() || 'composer-2.5'
 
 export function getCursorApiKey(): string {
   const key = process.env.CURSOR_API_KEY?.trim()
-  if (!key) throw new Error('CURSOR_API_KEY is missing. Add it to app/.env.')
+  if (!key) throw new Error('CURSOR_API_KEY is missing. Add it to food-photo-generator/.env.')
   return key
 }
 

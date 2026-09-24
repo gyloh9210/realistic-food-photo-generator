@@ -9,8 +9,8 @@
 
 ## Test plan
 <!-- Commands you ran + outcome. Check only what you actually ran. -->
-- [ ] `cd app && npm test` —
-- [ ] `cd app && npm run typecheck` —
+- [ ] `cd food-photo-generator && npm test` —
+- [ ] `cd food-photo-generator && npm run typecheck` —
 - [ ] Manual:
 
 ## Risk / review focus
