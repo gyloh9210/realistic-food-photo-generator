@@ -4,3 +4,7 @@ dist/
 .env
 .env.local
 runs/
+.worktrees/
+agent-workflow/data/
+agent-workflow/node_modules/
+agent-workflow/dist/

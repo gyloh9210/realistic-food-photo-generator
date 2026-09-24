@@ -1,0 +1,99 @@
+:root {
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: #f6f6f8;
+}
+
+body {
+  margin: 0;
+}
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #e0e0e4;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.muted {
+  color: #666;
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+.error {
+  color: #b00020;
+}
+
+.jobs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.jobs-table th,
+.jobs-table td {
+  text-align: left;
+  padding: 0.5rem 0.35rem;
+  border-bottom: 1px solid #eee;
+}
+
+.status {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.status-queued { background: #e8eaf6; }
+.status-running { background: #fff3e0; }
+.status-done { background: #e8f5e9; }
+.status-failed { background: #ffebee; }
+.status-stopped { background: #eceff1; }
+
+.spec-preview,
+.log-preview {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.85rem;
+  max-height: 320px;
+  overflow: auto;
+  background: #fafafa;
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+
+.log-preview {
+  max-height: 400px;
+  font-family: ui-monospace, monospace;
+}
+
+code {
+  font-size: 0.88em;
+}
+
+a {
+  color: #1565c0;
+}
