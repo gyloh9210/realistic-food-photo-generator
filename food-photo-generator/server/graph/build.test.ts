@@ -64,7 +64,7 @@ describe('the full run graph', () => {
     vi.mocked(searchIndex.findReferenceCandidates).mockImplementation(async (_query, _exclude, needed) =>
       Array.from({ length: needed }, (_v, i) => ({ sourceUrl: `https://example.com/${Math.random()}-${i}.jpg` })),
     )
-    vi.mocked(download.downloadImage).mockResolvedValue(undefined)
+    vi.mocked(download.downloadImage).mockImplementation(async (url: string) => `hash:${url}`)
     vi.mocked(screenAgent.screenReferenceImages).mockImplementation(async ({ images }) =>
       Object.fromEntries(images.map((image) => [image.id, 'looks plausible'])),
     )
