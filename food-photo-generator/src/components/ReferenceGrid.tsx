@@ -62,8 +62,8 @@ export function ReferenceGrid(props: {
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
-                      variant={decision === 'approved' ? 'default' : 'outline'}
-                      className={cn(decision === 'approved' && 'ring-2 ring-primary ring-offset-2')}
+                      variant="success"
+                      className={cn(decision === 'approved' && 'ring-2 ring-success ring-offset-2')}
                       onClick={() => setStatus(image.id, 'approved')}
                     >
                       Approve

@@ -38,7 +38,7 @@ export function FinalReview(props: {
         </CardContent>
       </Card>
       <div className="flex flex-wrap gap-2">
-        <Button type="button" onClick={() => submit({ status: 'approved' })} disabled={submitting}>
+        <Button type="button" variant="success" onClick={() => submit({ status: 'approved' })} disabled={submitting}>
           {submitting ? 'Submitting…' : 'Approve'}
         </Button>
         {!showReasonField ? (
