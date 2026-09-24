@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { downloadImage } from './download.js'
+import { hashBuffer } from './hash.js'
 
 describe('downloadImage', () => {
   let tempDir: string | undefined
@@ -26,9 +27,11 @@ describe('downloadImage', () => {
       }),
     )
 
-    await downloadImage('https://example.com/photo.jpg', dest)
+    const bytes = new TextEncoder().encode('fake-image-bytes')
+    const hash = await downloadImage('https://example.com/photo.jpg', dest)
 
     expect((await readFile(dest, 'utf8'))).toBe('fake-image-bytes')
+    expect(hash).toBe(hashBuffer(Buffer.from(bytes)))
   })
 
   it('throws when the response is not ok', async () => {
