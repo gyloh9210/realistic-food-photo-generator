@@ -37,6 +37,61 @@ describe('RunPage', () => {
     expect(await screen.findByText('Working…')).toBeInTheDocument()
   })
 
+  it('keeps dish prompt and reference photos visible after reference submit reaches final review', async () => {
+    const referenceSnapshot: RunSnapshot = {
+      runId: 'run-1',
+      state: baseState({ runStatus: 'paused-references' }),
+      pendingInterrupt: {
+        type: 'references',
+        capped: false,
+        images: [{ id: 'a', sourceUrl: 'https://x/a.jpg', localPath: '/run-files/1/a.jpg', status: 'pending' }],
+      },
+    }
+    const finalSnapshot: RunSnapshot = {
+      runId: 'run-1',
+      state: baseState({
+        runStatus: 'paused-final',
+        referenceImages: [
+          { id: 'a', sourceUrl: 'https://x/a.jpg', localPath: '/run-files/1/a.jpg', status: 'approved' },
+        ],
+      }),
+      pendingInterrupt: {
+        type: 'final',
+        capped: false,
+        imageUrl: '/run-files/1/generated/attempt-0.png',
+      },
+    }
+    vi.spyOn(api, 'fetchRun').mockResolvedValue(referenceSnapshot)
+    vi.spyOn(api, 'resumeRun').mockResolvedValue(finalSnapshot)
+    const user = userEvent.setup()
+
+    renderRunPage()
+    await screen.findByText('Review reference photos')
+    await user.click(screen.getByRole('button', { name: 'Approve' }))
+    await user.click(screen.getByRole('button', { name: 'Submit review' }))
+
+    expect(await screen.findByText('Review the generated photo')).toBeInTheDocument()
+    expect(screen.getByText('nasi lemak')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Candidate reference' })).toBeInTheDocument()
+  })
+
+  it('shows working status alongside retained reference context', async () => {
+    vi.spyOn(api, 'fetchRun').mockResolvedValue({
+      runId: 'run-1',
+      state: baseState({
+        runStatus: 'working',
+        referenceImages: [
+          { id: 'a', sourceUrl: 'https://x/a.jpg', localPath: '/run-files/1/a.jpg', status: 'approved' },
+        ],
+      }),
+      pendingInterrupt: null,
+    })
+    renderRunPage()
+
+    expect(await screen.findByText('Working…')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Candidate reference' })).toBeInTheDocument()
+  })
+
   it('renders the reference review UI and resumes on submit', async () => {
     const snapshot: RunSnapshot = {
       runId: 'run-1',

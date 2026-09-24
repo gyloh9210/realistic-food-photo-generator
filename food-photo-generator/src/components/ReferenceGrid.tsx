@@ -8,26 +8,41 @@ import { cn } from '@/lib/utils.js'
 
 type Decision = { status: 'approved' | 'rejected'; rejectReason?: string }
 
+function decisionForImage(
+  image: ReferenceImage,
+  decisions: Record<string, Decision>,
+  readOnly: boolean,
+): Decision | undefined {
+  if (readOnly && image.status !== 'pending') {
+    return { status: image.status, rejectReason: image.rejectReason }
+  }
+  return decisions[image.id]
+}
+
 export function ReferenceGrid(props: {
   images: ReferenceImage[]
   capped: boolean
   round: number
   submitting?: boolean
+  readOnly?: boolean
   onSubmit: (decisions: { id: string; status: 'approved' | 'rejected'; rejectReason?: string }[]) => void
 }) {
-  const { images, capped, round, submitting = false, onSubmit } = props
+  const { images, capped, round, submitting = false, readOnly = false, onSubmit } = props
   const [decisions, setDecisions] = useState<Record<string, Decision>>({})
+  const locked = submitting || readOnly
 
   function setStatus(id: string, status: 'approved' | 'rejected') {
+    if (locked) return
     setDecisions((prev) => ({ ...prev, [id]: { status, rejectReason: prev[id]?.rejectReason } }))
   }
 
   function setReason(id: string, rejectReason: string) {
+    if (locked) return
     setDecisions((prev) => ({ ...prev, [id]: { status: 'rejected', rejectReason } }))
   }
 
   function handleSubmit() {
-    if (submitting) return
+    if (locked) return
     onSubmit(
       images.map((image) => ({
         id: image.id,
@@ -39,8 +54,11 @@ export function ReferenceGrid(props: {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Review reference photos</h1>
-      {capped && (
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Review reference photos</h1>
+        {readOnly && <p className="text-sm text-muted-foreground">Submitted for reference</p>}
+      </div>
+      {capped && !readOnly && (
         <Alert variant="destructive">
           <AlertDescription>
             This has looped {round} times. You can still approve one of these to continue, but rejecting now
@@ -50,7 +68,8 @@ export function ReferenceGrid(props: {
       )}
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {images.map((image) => {
-          const decision = decisions[image.id]?.status
+          const decision = decisionForImage(image, decisions, readOnly)?.status
+          const rejectReason = decisionForImage(image, decisions, readOnly)?.rejectReason
           return (
             <li key={image.id}>
               <Card>
@@ -64,6 +83,7 @@ export function ReferenceGrid(props: {
                       type="button"
                       variant={decision === 'approved' ? 'default' : 'outline'}
                       className={cn(decision === 'approved' && 'ring-2 ring-primary ring-offset-2')}
+                      disabled={locked}
                       onClick={() => setStatus(image.id, 'approved')}
                     >
                       Approve
@@ -72,6 +92,7 @@ export function ReferenceGrid(props: {
                       type="button"
                       variant={decision === 'rejected' ? 'destructive' : 'outline'}
                       className={cn(decision === 'rejected' && 'ring-2 ring-destructive ring-offset-2')}
+                      disabled={locked}
                       onClick={() => setStatus(image.id, 'rejected')}
                     >
                       Reject
@@ -80,7 +101,8 @@ export function ReferenceGrid(props: {
                   {decision === 'rejected' && (
                     <Input
                       aria-label={`Reason for rejecting ${image.id}`}
-                      value={decisions[image.id]?.rejectReason ?? ''}
+                      value={rejectReason ?? ''}
+                      disabled={locked}
                       onChange={(event) => setReason(image.id, event.target.value)}
                     />
                   )}
@@ -90,9 +112,11 @@ export function ReferenceGrid(props: {
           )
         })}
       </ul>
-      <Button type="button" onClick={handleSubmit} disabled={submitting}>
-        {submitting ? 'Submitting…' : 'Submit review'}
-      </Button>
+      {!readOnly && (
+        <Button type="button" onClick={handleSubmit} disabled={submitting}>
+          {submitting ? 'Submitting…' : 'Submit review'}
+        </Button>
+      )}
     </section>
   )
 }

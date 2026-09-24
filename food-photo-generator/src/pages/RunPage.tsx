@@ -3,12 +3,28 @@ import { useParams } from 'react-router-dom'
 import { fetchRun, resumeRun } from '../api.js'
 import { ReferenceGrid } from '../components/ReferenceGrid.js'
 import { FinalReview } from '../components/FinalReview.js'
+import { RunContext, RunGenerationPrompt } from '../components/RunContext.js'
 import { PageShell } from '@/components/PageShell.js'
 import { Alert, AlertDescription } from '@/components/ui/alert.js'
 import { Card, CardContent } from '@/components/ui/card.js'
 import type { RunSnapshot } from '../../shared/types.js'
 
 const POLL_INTERVAL_MS = 2000
+
+function isInteractiveReferenceReview(snapshot: RunSnapshot): boolean {
+  const { state, pendingInterrupt } = snapshot
+  return (
+    (state.runStatus === 'paused-references' || state.runStatus === 'capped-references') &&
+    pendingInterrupt?.type === 'references'
+  )
+}
+
+function shouldShowArchivedReferences(snapshot: RunSnapshot): boolean {
+  const { state } = snapshot
+  if (state.referenceImages.length === 0) return false
+  if (!state.referenceImages.some((image) => image.status !== 'pending')) return false
+  return !isInteractiveReferenceReview(snapshot)
+}
 
 export function RunPage() {
   const { runId } = useParams<{ runId: string }>()
@@ -65,6 +81,20 @@ export function RunPage() {
     await submitResume(payload)
   }
 
+  function renderArchivedReferences() {
+    if (!snapshot || !shouldShowArchivedReferences(snapshot)) return null
+    const { state } = snapshot
+    return (
+      <ReferenceGrid
+        images={state.referenceImages}
+        capped={false}
+        round={state.referenceRound}
+        readOnly
+        onSubmit={() => {}}
+      />
+    )
+  }
+
   function renderBody() {
     if (!snapshot) return error ? null : <p className="text-muted-foreground">Loading…</p>
 
@@ -72,45 +102,75 @@ export function RunPage() {
 
     switch (state.runStatus) {
       case 'working':
-        return <p className="text-muted-foreground">Working…</p>
+        return (
+          <div className="space-y-8">
+            {renderArchivedReferences()}
+            {state.generationPrompt && <RunGenerationPrompt generationPrompt={state.generationPrompt} />}
+            {state.generatedImagePath && state.finalStatus !== 'pending' ? (
+              <FinalReview
+                imageUrl={state.generatedImagePath}
+                capped={false}
+                round={state.finalRound}
+                readOnly
+                submittedStatus={state.finalStatus}
+                submittedRejectReason={state.finalRejectReason}
+                onSubmit={() => {}}
+              />
+            ) : (
+              <p className="text-muted-foreground">Working…</p>
+            )}
+          </div>
+        )
       case 'paused-references':
       case 'capped-references':
-        return pendingInterrupt?.type === 'references' ? (
-          <ReferenceGrid
-            images={pendingInterrupt.images}
-            capped={pendingInterrupt.capped}
-            round={state.referenceRound}
-            submitting={submitting}
-            onSubmit={handleReferencesSubmit}
-          />
-        ) : null
+        if (pendingInterrupt?.type === 'references') {
+          return (
+            <ReferenceGrid
+              images={pendingInterrupt.images}
+              capped={pendingInterrupt.capped}
+              round={state.referenceRound}
+              submitting={submitting}
+              onSubmit={handleReferencesSubmit}
+            />
+          )
+        }
+        return null
       case 'paused-final':
       case 'capped-final':
-        return pendingInterrupt?.type === 'final' ? (
-          <FinalReview
-            imageUrl={pendingInterrupt.imageUrl}
-            capped={pendingInterrupt.capped}
-            round={state.finalRound}
-            submitting={submitting}
-            onSubmit={handleFinalSubmit}
-          />
-        ) : null
+        if (pendingInterrupt?.type === 'final') {
+          return (
+            <div className="space-y-8">
+              {renderArchivedReferences()}
+              <FinalReview
+                imageUrl={pendingInterrupt.imageUrl}
+                capped={pendingInterrupt.capped}
+                round={state.finalRound}
+                submitting={submitting}
+                onSubmit={handleFinalSubmit}
+              />
+            </div>
+          )
+        }
+        return null
       case 'done':
         return (
-          <section className="space-y-4">
-            <h1 className="text-2xl font-semibold tracking-tight">Done</h1>
-            {state.generatedImagePath && (
-              <Card>
-                <CardContent className="p-0">
-                  <img
-                    src={state.generatedImagePath}
-                    alt="Final food photo"
-                    className="w-full rounded-lg"
-                  />
-                </CardContent>
-              </Card>
-            )}
-          </section>
+          <div className="space-y-8">
+            {renderArchivedReferences()}
+            <section className="space-y-4">
+              <h1 className="text-2xl font-semibold tracking-tight">Done</h1>
+              {state.generatedImagePath && (
+                <Card>
+                  <CardContent className="p-0">
+                    <img
+                      src={state.generatedImagePath}
+                      alt="Final food photo"
+                      className="w-full rounded-lg"
+                    />
+                  </CardContent>
+                </Card>
+              )}
+            </section>
+          </div>
         )
       case 'failed':
         return (
@@ -137,6 +197,11 @@ export function RunPage() {
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
+      )}
+      {snapshot && (
+        <div className="mb-8">
+          <RunContext prompt={snapshot.state.prompt} />
+        </div>
       )}
       {renderBody()}
     </PageShell>
