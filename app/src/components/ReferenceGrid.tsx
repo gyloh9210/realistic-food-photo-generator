@@ -1,5 +1,10 @@
 import { useState } from 'react'
 import type { ReferenceImage } from '../../shared/types.js'
+import { Alert, AlertDescription } from '@/components/ui/alert.js'
+import { Button } from '@/components/ui/button.js'
+import { Card, CardContent } from '@/components/ui/card.js'
+import { Input } from '@/components/ui/input.js'
+import { cn } from '@/lib/utils.js'
 
 type Decision = { status: 'approved' | 'rejected'; rejectReason?: string }
 
@@ -33,38 +38,61 @@ export function ReferenceGrid(props: {
   }
 
   return (
-    <section>
-      <h1>Review reference photos</h1>
+    <section className="space-y-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Review reference photos</h1>
       {capped && (
-        <p role="alert">
-          This has looped {round} times. You can still approve one of these to continue, but rejecting now
-          will abandon the run.
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription>
+            This has looped {round} times. You can still approve one of these to continue, but rejecting now
+            will abandon the run.
+          </AlertDescription>
+        </Alert>
       )}
-      <ul>
-        {images.map((image) => (
-          <li key={image.id}>
-            <img src={image.localPath} alt="Candidate reference" />
-            {image.cursorNote && <p>{image.cursorNote}</p>}
-            <button type="button" onClick={() => setStatus(image.id, 'approved')}>
-              Approve
-            </button>
-            <button type="button" onClick={() => setStatus(image.id, 'rejected')}>
-              Reject
-            </button>
-            {decisions[image.id]?.status === 'rejected' && (
-              <input
-                aria-label={`Reason for rejecting ${image.id}`}
-                value={decisions[image.id]?.rejectReason ?? ''}
-                onChange={(event) => setReason(image.id, event.target.value)}
-              />
-            )}
-          </li>
-        ))}
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {images.map((image) => {
+          const decision = decisions[image.id]?.status
+          return (
+            <li key={image.id}>
+              <Card>
+                <CardContent className="space-y-3">
+                  <img src={image.localPath} alt="Candidate reference" className="w-full rounded-md" />
+                  {image.cursorNote && (
+                    <p className="text-sm text-muted-foreground">{image.cursorNote}</p>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant={decision === 'approved' ? 'default' : 'outline'}
+                      className={cn(decision === 'approved' && 'ring-2 ring-primary ring-offset-2')}
+                      onClick={() => setStatus(image.id, 'approved')}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={decision === 'rejected' ? 'destructive' : 'outline'}
+                      className={cn(decision === 'rejected' && 'ring-2 ring-destructive ring-offset-2')}
+                      onClick={() => setStatus(image.id, 'rejected')}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                  {decision === 'rejected' && (
+                    <Input
+                      aria-label={`Reason for rejecting ${image.id}`}
+                      value={decisions[image.id]?.rejectReason ?? ''}
+                      onChange={(event) => setReason(image.id, event.target.value)}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            </li>
+          )
+        })}
       </ul>
-      <button type="button" onClick={handleSubmit} disabled={submitting}>
+      <Button type="button" onClick={handleSubmit} disabled={submitting}>
         {submitting ? 'Submitting…' : 'Submit review'}
-      </button>
+      </Button>
     </section>
   )
 }

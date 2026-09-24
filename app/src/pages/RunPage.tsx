@@ -3,6 +3,9 @@ import { useParams } from 'react-router-dom'
 import { fetchRun, resumeRun } from '../api.js'
 import { ReferenceGrid } from '../components/ReferenceGrid.js'
 import { FinalReview } from '../components/FinalReview.js'
+import { PageShell } from '@/components/PageShell.js'
+import { Alert, AlertDescription } from '@/components/ui/alert.js'
+import { Card, CardContent } from '@/components/ui/card.js'
 import type { RunSnapshot } from '../../shared/types.js'
 
 const POLL_INTERVAL_MS = 2000
@@ -63,13 +66,13 @@ export function RunPage() {
   }
 
   function renderBody() {
-    if (!snapshot) return error ? null : <p>Loading…</p>
+    if (!snapshot) return error ? null : <p className="text-muted-foreground">Loading…</p>
 
     const { state, pendingInterrupt } = snapshot
 
     switch (state.runStatus) {
       case 'working':
-        return <p>Working…</p>
+        return <p className="text-muted-foreground">Working…</p>
       case 'paused-references':
       case 'capped-references':
         return pendingInterrupt?.type === 'references' ? (
@@ -94,15 +97,33 @@ export function RunPage() {
         ) : null
       case 'done':
         return (
-          <section>
-            <h1>Done</h1>
-            {state.generatedImagePath && <img src={state.generatedImagePath} alt="Final food photo" />}
+          <section className="space-y-4">
+            <h1 className="text-2xl font-semibold tracking-tight">Done</h1>
+            {state.generatedImagePath && (
+              <Card>
+                <CardContent className="p-0">
+                  <img
+                    src={state.generatedImagePath}
+                    alt="Final food photo"
+                    className="w-full rounded-lg"
+                  />
+                </CardContent>
+              </Card>
+            )}
           </section>
         )
       case 'failed':
-        return <p role="alert">Run failed: {state.error}</p>
+        return (
+          <Alert variant="destructive">
+            <AlertDescription>Run failed: {state.error}</AlertDescription>
+          </Alert>
+        )
       case 'abandoned':
-        return <p role="alert">This run was abandoned.</p>
+        return (
+          <Alert variant="destructive">
+            <AlertDescription>This run was abandoned.</AlertDescription>
+          </Alert>
+        )
       default:
         return null
     }
@@ -111,9 +132,13 @@ export function RunPage() {
   // The error is a banner rather than a full-page replacement: a failed submit
   // must not throw away the review UI the human still needs to act on.
   return (
-    <>
-      {error && <p role="alert">{error}</p>}
+    <PageShell>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       {renderBody()}
-    </>
+    </PageShell>
   )
 }

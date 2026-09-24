@@ -13,9 +13,9 @@ polling one snapshot object and rendering off its `runStatus`.
 - **React Router** — exactly two routes, defined in [`App.tsx`](App.tsx):
   `/` ([`pages/Home.tsx`](pages/Home.tsx), the prompt form) and
   `/runs/:runId` ([`pages/RunPage.tsx`](pages/RunPage.tsx), everything else).
-- **Plain CSS** — one stylesheet (`styles.css`), no Tailwind, no component
-  library. Deliberate: this is a small enough UI that a framework would add
-  more overhead than it saves.
+- **Tailwind CSS v4 + shadcn/ui (Radix)** — global tokens in `index.css`;
+  shared primitives live under [`components/ui/`](components/ui/). Feature
+  code imports them via the `@/` path alias (e.g. `@/components/ui/button`).
 - **[`api.ts`](api.ts)** — the only file that calls `fetch`. Three
   functions (`createRun`, `fetchRun`, `resumeRun`) map 1:1 to the backend's
   three routes and throw on a non-`ok` response; every component goes

@@ -51,7 +51,7 @@ of it.
 - **Backend**: Node + TypeScript, Express, `@langchain/langgraph` (the graph
   and its `MemorySaver` checkpointer), `@cursor/sdk` for all vision/writing/
   generation calls (model `composer-2.5`)
-- **Frontend**: Vite + React + TypeScript, plain CSS (no UI framework)
+- **Frontend**: Vite + React + TypeScript, Tailwind CSS v4 + shadcn/ui (Radix)
 - **Reference image search**: Openverse and Wikimedia Commons APIs (free,
   keyless)
 - **Testing**: Vitest, Testing Library, Supertest
