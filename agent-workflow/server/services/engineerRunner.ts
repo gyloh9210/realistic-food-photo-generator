@@ -21,8 +21,13 @@ export async function runEngineerForJob(job: FeatureJob): Promise<EngineerRunRes
   const systemPrompt = await loadEngineerSystemPrompt()
   const task = [
     'Implement the feature described in the spec below.',
+    '',
+    `Job id: ${job.id}`,
+    `Branch: ${job.branch}`,
     `Spec path (absolute): ${job.specPath}`,
-    `Worktree branch: ${job.branch}`,
+    `Worktree cwd: ${job.worktreePath}`,
+    '',
+    'When done: commit, push, open PR to main using .github/pull_request_template.md (see engineer persona).',
     '',
     '---',
     '',

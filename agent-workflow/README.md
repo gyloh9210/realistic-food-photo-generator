@@ -19,6 +19,16 @@ npm run dev
 
 Headless (watcher + API only): `npm run worker`
 
+## Engineer PR flow
+
+Each engineer run expects:
+
+- **[GitHub CLI](https://cli.github.com/)** (`gh`) authenticated (`gh auth login`)
+- Permission to **push** `feature/*` branches to `origin`
+- The repo [PR template](../.github/pull_request_template.md) on the branch the worktree was created from
+
+The agent commits in the worktree, pushes, and opens a PR against **`main`** using the template (see [`personas/engineer.md`](personas/engineer.md)).
+
 ## Drop-a-spec workflow
 
 1. Add `my-feature.md` to [`ready-spec/`](ready-spec/).

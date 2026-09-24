@@ -9,6 +9,7 @@ agent-workflow/.env
 agent-workflow/.env.local
 runs/
 .worktrees/
+.agent-workflow/
 agent-workflow/data/
 agent-workflow/node_modules/
 agent-workflow/dist/
