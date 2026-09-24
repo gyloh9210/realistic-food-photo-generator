@@ -42,4 +42,41 @@ describe('ReferenceGrid', () => {
     await user.click(button)
     expect(onSubmit).not.toHaveBeenCalled()
   })
+
+  it('disables all review controls while a submission is in flight', () => {
+    render(<ReferenceGrid images={images} capped={false} round={0} submitting onSubmit={vi.fn()} />)
+
+    for (const approve of screen.getAllByRole('button', { name: 'Approve' })) {
+      expect(approve).toBeDisabled()
+    }
+    for (const reject of screen.getAllByRole('button', { name: 'Reject' })) {
+      expect(reject).toBeDisabled()
+    }
+  })
+
+  it('shows server decisions in read-only mode and does not submit on click', async () => {
+    const onSubmit = vi.fn()
+    const user = userEvent.setup()
+    const reviewed: ReferenceImage[] = [
+      {
+        id: 'a',
+        sourceUrl: 'https://x/a.jpg',
+        localPath: '/run-files/1/references/a.jpg',
+        status: 'approved',
+      },
+      {
+        id: 'b',
+        sourceUrl: 'https://x/b.jpg',
+        localPath: '/run-files/1/references/b.jpg',
+        status: 'rejected',
+        rejectReason: 'too dark',
+      },
+    ]
+    render(<ReferenceGrid images={reviewed} capped={false} round={1} readOnly onSubmit={onSubmit} />)
+
+    expect(screen.queryByRole('button', { name: 'Submit review' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Reason for rejecting b')).toHaveValue('too dark')
+    await user.click(screen.getAllByRole('button', { name: 'Approve' })[0])
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
 })

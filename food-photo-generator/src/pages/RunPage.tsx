@@ -3,12 +3,55 @@ import { useParams } from 'react-router-dom'
 import { fetchRun, resumeRun } from '../api.js'
 import { ReferenceGrid } from '../components/ReferenceGrid.js'
 import { FinalReview } from '../components/FinalReview.js'
+import { RunContext } from '../components/RunContext.js'
 import { PageShell } from '@/components/PageShell.js'
 import { Alert, AlertDescription } from '@/components/ui/alert.js'
 import { Card, CardContent } from '@/components/ui/card.js'
-import type { RunSnapshot } from '../../shared/types.js'
+import type { RunSnapshot, RunState } from '../../shared/types.js'
 
 const POLL_INTERVAL_MS = 2000
+
+function hasReviewedReferences(referenceImages: RunState['referenceImages']): boolean {
+  return referenceImages.some((image) => image.status !== 'pending')
+}
+
+function isInteractiveReferenceReview(
+  runStatus: RunState['runStatus'],
+  pendingInterrupt: RunSnapshot['pendingInterrupt'],
+): boolean {
+  return (
+    (runStatus === 'paused-references' || runStatus === 'capped-references') &&
+    pendingInterrupt?.type === 'references'
+  )
+}
+
+function shouldShowArchivedReferences(state: RunState, pendingInterrupt: RunSnapshot['pendingInterrupt']): boolean {
+  if (isInteractiveReferenceReview(state.runStatus, pendingInterrupt)) return false
+  if (state.referenceImages.length === 0) return false
+  return hasReviewedReferences(state.referenceImages)
+}
+
+function ArchivedReferenceGrid(props: { state: RunState }) {
+  const { state } = props
+  return (
+    <ReferenceGrid
+      images={state.referenceImages}
+      capped={false}
+      round={state.referenceRound}
+      readOnly
+      onSubmit={() => {}}
+    />
+  )
+}
+
+function GenerationPromptSection(props: { generationPrompt: string }) {
+  return (
+    <section className="space-y-2">
+      <h2 className="text-lg font-semibold tracking-tight">Prompt used for image</h2>
+      <p className="whitespace-pre-wrap text-muted-foreground">{props.generationPrompt}</p>
+    </section>
+  )
+}
 
 export function RunPage() {
   const { runId } = useParams<{ runId: string }>()
@@ -65,14 +108,31 @@ export function RunPage() {
     await submitResume(payload)
   }
 
-  function renderBody() {
-    if (!snapshot) return error ? null : <p className="text-muted-foreground">Loading…</p>
-
+  function renderStepContent(snapshot: RunSnapshot) {
     const { state, pendingInterrupt } = snapshot
+    const archivedReferences = shouldShowArchivedReferences(state, pendingInterrupt)
 
     switch (state.runStatus) {
       case 'working':
-        return <p className="text-muted-foreground">Working…</p>
+        return (
+          <>
+            {archivedReferences && <ArchivedReferenceGrid state={state} />}
+            {state.generationPrompt && <GenerationPromptSection generationPrompt={state.generationPrompt} />}
+            {state.generatedImagePath && state.finalStatus !== 'pending' ? (
+              <FinalReview
+                imageUrl={state.generatedImagePath}
+                capped={false}
+                round={state.finalRound}
+                readOnly
+                submittedStatus={state.finalStatus}
+                submittedRejectReason={state.finalRejectReason}
+                onSubmit={() => {}}
+              />
+            ) : (
+              <p className="text-muted-foreground">Working…</p>
+            )}
+          </>
+        )
       case 'paused-references':
       case 'capped-references':
         return pendingInterrupt?.type === 'references' ? (
@@ -86,31 +146,39 @@ export function RunPage() {
         ) : null
       case 'paused-final':
       case 'capped-final':
-        return pendingInterrupt?.type === 'final' ? (
-          <FinalReview
-            imageUrl={pendingInterrupt.imageUrl}
-            capped={pendingInterrupt.capped}
-            round={state.finalRound}
-            submitting={submitting}
-            onSubmit={handleFinalSubmit}
-          />
-        ) : null
+        return (
+          <>
+            {archivedReferences && <ArchivedReferenceGrid state={state} />}
+            {pendingInterrupt?.type === 'final' ? (
+              <FinalReview
+                imageUrl={pendingInterrupt.imageUrl}
+                capped={pendingInterrupt.capped}
+                round={state.finalRound}
+                submitting={submitting}
+                onSubmit={handleFinalSubmit}
+              />
+            ) : null}
+          </>
+        )
       case 'done':
         return (
-          <section className="space-y-4">
-            <h1 className="text-2xl font-semibold tracking-tight">Done</h1>
-            {state.generatedImagePath && (
-              <Card>
-                <CardContent className="p-0">
-                  <img
-                    src={state.generatedImagePath}
-                    alt="Final food photo"
-                    className="w-full rounded-lg"
-                  />
-                </CardContent>
-              </Card>
-            )}
-          </section>
+          <>
+            {archivedReferences && <ArchivedReferenceGrid state={state} />}
+            <section className="space-y-4">
+              <h1 className="text-2xl font-semibold tracking-tight">Done</h1>
+              {state.generatedImagePath && (
+                <Card>
+                  <CardContent className="p-0">
+                    <img
+                      src={state.generatedImagePath}
+                      alt="Final food photo"
+                      className="w-full rounded-lg"
+                    />
+                  </CardContent>
+                </Card>
+              )}
+            </section>
+          </>
         )
       case 'failed':
         return (
@@ -127,6 +195,17 @@ export function RunPage() {
       default:
         return null
     }
+  }
+
+  function renderBody() {
+    if (!snapshot) return error ? null : <p className="text-muted-foreground">Loading…</p>
+
+    return (
+      <div className="space-y-6">
+        <RunContext prompt={snapshot.state.prompt} />
+        {renderStepContent(snapshot)}
+      </div>
+    )
   }
 
   // The error is a banner rather than a full-page replacement: a failed submit

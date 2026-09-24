@@ -48,7 +48,16 @@ describe('RunPage', () => {
       },
     }
     vi.spyOn(api, 'fetchRun').mockResolvedValue(snapshot)
-    vi.spyOn(api, 'resumeRun').mockResolvedValue({ ...snapshot, state: baseState({ runStatus: 'paused-final' }) })
+    vi.spyOn(api, 'resumeRun').mockResolvedValue({
+      runId: 'run-1',
+      state: baseState({
+        runStatus: 'paused-final',
+        referenceImages: [
+          { id: 'a', sourceUrl: 'https://x/a.jpg', localPath: '/run-files/1/a.jpg', status: 'approved' },
+        ],
+      }),
+      pendingInterrupt: { type: 'final', capped: false, imageUrl: '/run-files/1/generated/attempt-0.png' },
+    })
     const user = userEvent.setup()
 
     renderRunPage()
@@ -57,6 +66,27 @@ describe('RunPage', () => {
     await user.click(screen.getByRole('button', { name: 'Submit review' }))
 
     expect(api.resumeRun).toHaveBeenCalledWith('run-1', { decisions: [{ id: 'a', status: 'approved', rejectReason: undefined }] })
+    expect(await screen.findByText('nasi lemak')).toBeInTheDocument()
+    expect(await screen.findByRole('img', { name: 'Candidate reference' })).toBeInTheDocument()
+    expect(screen.getByText('Review the generated photo')).toBeInTheDocument()
+  })
+
+  it('keeps reference context visible while working after reference review', async () => {
+    vi.spyOn(api, 'fetchRun').mockResolvedValue({
+      runId: 'run-1',
+      state: baseState({
+        runStatus: 'working',
+        referenceImages: [
+          { id: 'a', sourceUrl: 'https://x/a.jpg', localPath: '/run-files/1/a.jpg', status: 'approved' },
+        ],
+      }),
+      pendingInterrupt: null,
+    })
+    renderRunPage()
+
+    expect(await screen.findByText('Working…')).toBeInTheDocument()
+    expect(screen.getByText('nasi lemak')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Candidate reference' })).toBeInTheDocument()
   })
 
   it('surfaces an error instead of hanging when a reference submit is rejected', async () => {
