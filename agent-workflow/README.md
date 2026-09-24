@@ -32,7 +32,7 @@ The agent commits in the worktree, pushes, and opens a PR against **`main`** usi
 ## Drop-a-spec workflow
 
 1. Add `my-feature.md` to [`ready-spec/`](ready-spec/).
-2. The watcher moves it to `specs/in-progress/`, creates `.worktrees/my-feature` on `feature/my-feature`, and queues the engineer.
+2. The watcher moves it to `specs/in-progress/`, runs `git fetch origin main`, creates `.worktrees/my-feature` on a new `feature/my-feature` branch from **`origin/main`**, and queues the engineer.
 3. Watch progress on the dashboard or in `data/logs/my-feature.log`.
 4. On success, the spec moves to `specs/done/`.
 
